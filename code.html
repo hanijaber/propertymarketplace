@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Marketplace</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Add these for Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        .page {
+            display: none;
+        }
+        .active-page {
+            display: block;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        }
+        .property-card:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Property Listings Page -->
+    <div id="listings-page" class="page active-page">
+        <!-- Header -->
+        <header class="gradient-bg text-white">
+            <div class="container mx-auto px-4 py-6">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
+                        <h1 class="text-xl font-bold">Property Marketplace</h1>
+                    </div>
+                    <button onclick="showPage('add-property-page')" class="bg-white text-blue-600 px-6 py-2 rounded-lg hover:bg-gray-100 transition flex items-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <span>Add Property</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="container mx-auto px-4 py-8">
+            <!-- Property List -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-6">Available Properties</h2>
+                    <div id="property-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Properties will be added here dynamically -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Property Page -->
+    <div id="add-property-page" class="page">
+        <!-- Header -->
+        <header class="gradient-bg text-white">
+            <div class="container mx-auto px-4 py-6">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-2">
+                        <button onclick="showPage('listings-page')" class="mr-2 text-white hover:text-gray-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                        </button>
+                        <h1 class="text-xl font-bold">Add New Property</h1>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Add Property Form -->
+        <main class="container mx-auto px-4 py-8">
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="p-6">
+                    <form onsubmit="addProperty(event)" class="space-y-6">
+                        <!-- Basic Information -->
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-4">Basic Information</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="property-title" class="block text-sm font-medium text-gray-700 mb-1">Title*</label>
+                                    <input type="text" id="property-title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Beautiful beachfront villa" required>
+                                </div>
+                                <div>
+                                    <label for="property-type" class="block text-sm font-medium text-gray-700 mb-1">Type*</label>
+                                    <select id="property-type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                                        <option value="">Select property type</option>
+                                        <option value="House">House</option>
+                                        <option value="Apartment">Apartment</option>
+                                        <option value="Villa">Villa</option>
+                                        <option value="Land">Land</option>
+                                        <option value="Commercial">Commercial</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="property-price" class="block text-sm font-medium text-gray-700 mb-1">Price*</label>
+                                    <input type="number" id="property-price" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="500000" required>
+                                </div>
+                                <div>
+                                    <label for="property-area" class="block text-sm font-medium text-gray-700 mb-1">Area (sq ft)*</label>
+                                    <input type="number" id="property-area" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="2000" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Location -->
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-4">Location</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="property-address" class="block text-sm font-medium text-gray-700 mb-1">Address*</label>
+                                    <input type="text" id="property-address" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="123 Main Street" required>
+                                </div>
+                                <div>
+                                    <label for="property-city" class="block text-sm font-medium text-gray-700 mb-1">City*</label>
+                                    <input type="text" id="property-city" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="New York" required>
+                                </div>
+                                <div>
+                                    <label for="property-state" class="block text-sm font-medium text-gray-700 mb-1">State*</label>
+                                    <input type="text" id="property-state" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="NY" required>
+                                </div>
+                                <div>
+                                    <label for="property-zip" class="block text-sm font-medium text-gray-700 mb-1">ZIP Code*</label>
+                                    <input type="text" id="property-zip" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="10001" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Description -->
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-4">Description</h3>
+                            <div>
+                                <label for="property-description" class="block text-sm font-medium text-gray-700 mb-1">Details*</label>
+                                <textarea id="property-description" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Describe your property in detail..." required></textarea>
+                            </div>
+                        </div>
+                        
+                        <!-- Images -->
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-4">Images</h3>
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                                <input type="file" id="property-images" class="hidden" accept="image/*" multiple>
+                                <div id="image-preview" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 hidden">
+                                    <!-- Image previews will be added here -->
+                                </div>
+                                <label for="property-images" class="cursor-pointer">
+                                    <div class="flex flex-col items-center justify-center space-y-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                        </svg>
+                                        <p class="text-sm text-gray-500">Click to upload images or drag and drop</p>
+                                        <p class="text-xs text-gray-400">PNG, JPG, GIF (Max 10MB each)</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Contact Information -->
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-4">Contact Information</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="contact-name" class="block text-sm font-medium text-gray-700 mb-1">Your Name*</label>
+                                    <input type="text" id="contact-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                                </div>
+                                <div>
+                                    <label for="contact-phone" class="block text-sm font-medium text-gray-700 mb-1">Phone*</label>
+                                    <input type="tel" id="contact-phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                                </div>
+                                <div>
+                                    <label for="contact-email" class="block text-sm font-medium text-gray-700 mb-1">Email*</label>
+                                    <input type="email" id="contact-email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                                </div>
+                                <div>
+                                    <label for="contact-hours" class="block text-sm font-medium text-gray-700 mb-1">Available Hours</label>
+                                    <input type="text" id="contact-hours" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="9AM - 5PM">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="pt-4">
+                            <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition">Submit Property</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Property Detail Page -->
+    <div id="property-detail-page" class="page">
+        <!-- Header -->
+        <header class="gradient-bg text-white">
+            <div class="container mx-auto px-4 py-6">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-2">
+                        <button onclick="showPage('listings-page')" class="mr-2 text-white hover:text-gray-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                        </button>
+                        <h1 id="detail-title" class="text-xl font-bold">Property Details</h1>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Property Detail Content -->
+        <main class="container mx-auto px-4 py-8">
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="p-6">
+                    <div class="mb-6">
+                        <div class="relative h-64 md:h-80 w-full rounded-xl overflow-hidden bg-gray-100">
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <img id="detail-main-image" src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/ea53b24d-4e75-4245-9742-e2f0ea6b95ac.png" alt="Property main image" class="w-full h-full object-cover">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                        <div class="md:col-span-2">
+                            <h3 class="text-lg font-medium text-gray-800 mb-4">Description</h3>
+                            <p id="detail-description" class="text-gray-600 mb-6"></p>
+                        </div>
+                        
+                        <div>
+                            <div class="bg-gray-50 rounded-xl p-6">
+                                <h3 class="text-lg font-medium text-gray-800 mb-4">Property Details</h3>
+                                <div class="space-y-4">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-500">Price</span>
+                                        <span id="detail-price" class="text-gray-800 font-medium"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-500">Type</span>
+                                        <span id="detail-type" class="text-gray-800 font-medium"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-500">Area</span>
+                                        <span id="detail-area" class="text-gray-800 font-medium"></span>
+                                    </div>
+                                    <div class="border-t border-gray-200 my-4"></div>
+                                    
+                                    <h3 class="text-lg font-medium text-gray-800">Location</h3>
+                                    <div class="text-gray-600">
+                                        <p id="detail-address" class="mb-1"></p>
+                                        <p id="detail-city-state" class="mb-1"></p>
+                                        <p id="detail-zip"></p>
+                                    </div>
+                                    <div class="border-t border-gray-200 my-4"></div>
+                                    
+                                    <h3 class="text-lg font-medium text-gray-800">Contact</h3>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                                            </svg>
+                                            <a id="detail-email" href="#" class="text-blue-600 hover:underline"></a>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                            </svg>
+                                            <a id="detail-phone" href="#" class="text-blue-600 hover:underline"></a>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            <span id="detail-hours" class="text-gray-600"></span>
+                                        </div>
+                                    </div>
+                                    
+                                    <button class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition mt-4">Contact Seller</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Global variables
+        // Replace with Firebase or other backend
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "your-app.firebaseapp.com",
+  projectId: "your-app",
+  storageBucket: "your-app.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef123456"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+        let currentDetail = null;
+
+        // Page navigation functions
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active-page');
+            });
+            
+            // Show requested page
+            document.getElementById(pageId).classList.add('active-page');
+            
+            // Scroll to top
+            window.scrollTo(0, 0);
+            
+            // If showing listings page, refresh properties
+            if (pageId === 'listings-page') {
+                renderProperties();
+            }
+        }
+
+        // Sample property data
+        function loadSampleProperties() {
+            properties = [
+                {
+                    id: 1,
+                    title: "Beachfront Villa",
+                    type: "Villa",
+                    price: "2500000",
+                    area: "3500",
+                    address: "123 Ocean Drive",
+                    city: "Miami",
+                    state: "FL",
+                    zip: "33139",
+                    description: "Stunning beachfront luxury villa with panoramic ocean views, infinity pool, and state-of-the-art amenities. This 5-bedroom property features floor-to-ceiling windows, high-end finishes throughout, and direct beach access.",
+                    contact: {
+                        name: "John Smith",
+                        phone: "+1 305 555 1234",
+                        email: "john@example.com",
+                        hours: "9AM - 6PM"
+                    },
+                    images: [
+                        "https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/32788c80-70b9-479b-aa5a-c1726217a13e.png"
+                    ]
+                },
+                {
+                    id: 2,
+                    title: "Downtown Apartment",
+                    type: "Apartment",
+                    price: "1200000",
+                    area: "1800",
+                    address: "456 Main Street",
+                    city: "New York",
+                    state: "NY",
+                    zip: "10001",
+                    description: "Sophisticated downtown apartment in premium building. Features open-concept living with designer finishes, smart home technology, stunning skyline views, and access to building amenities including gym and rooftop garden.",
+                    contact: {
+                        name: "Sarah Johnson",
+                        phone: "+1 212 555 9876",
+                        email: "sarah@example.com",
+                        hours: "10AM - 5PM"
+                    },
+                    images: [
+                        "https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/c4b58bf7-7485-440d-bbf7-ecf65375d93b.png"
+                    ]
+                }
+            ];
+            renderProperties();
+        }
+
+        // Render properties list
+        function renderProperties() {
+            const container = document.getElementById('property-list');
+            container.innerHTML = '';
+            
+            if (properties.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-3 text-center py-10">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                        <p class="text-gray-500">No properties available yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            properties.forEach(property => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl shadow-md overflow-hidden property-card transition duration-300 hover:shadow-lg';
+                card.innerHTML = `
+                    <div class="h-48 bg-gray-100 relative overflow-hidden">
+                        <img src="${property.images[0] || 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/69400d35-ddca-4a2e-8f42-0ba155ae8da4.png'}" alt="${property.title}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-6">
+                        <div class="flex items-start justify-between mb-2">
+                            <h3 class="text-lg font-bold text-gray-800">${property.title}</h3>
+                            <span class="bg-blue-100 text-blue-600 text-xs font-medium px-2 py-1 rounded-full">${property.type}</span>
+                        </div>
+                        <p class="text-gray-600 text-sm mb-4">${property.address}, ${property.city}, ${property.state} ${property.zip}</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-blue-600 font-bold">$${parseInt(property.price).toLocaleString()}</span>
+                            <button onclick="showPropertyDetail(${property.id})" class="view-details-btn text-blue-600 hover:text-blue-800 text-sm font-medium">View Details</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Show property detail
+        function showPropertyDetail(id) {
+            currentDetail = properties.find(p => p.id === id);
+            if (!currentDetail) return;
+            
+            // Populate detail fields
+            document.getElementById('detail-title').textContent = currentDetail.title;
+            document.getElementById('detail-main-image').src = currentDetail.images[0] || 'https://placehold.co/800x600';
+            document.getElementById('detail-main-image').alt = currentDetail.title;
+            document.getElementById('detail-description').textContent = currentDetail.description;
+            document.getElementById('detail-price').textContent = `$${parseInt(currentDetail.price).toLocaleString()}`;
+            document.getElementById('detail-type').textContent = currentDetail.type;
+            document.getElementById('detail-area').textContent = `${currentDetail.area} sq ft`;
+            document.getElementById('detail-address').textContent = currentDetail.address;
+            document.getElementById('detail-city-state').textContent = `${currentDetail.city}, ${currentDetail.state}`;
+            document.getElementById('detail-zip').textContent = currentDetail.zip;
+            document.getElementById('detail-email').textContent = currentDetail.contact.email;
+            document.getElementById('detail-email').href = `mailto:${currentDetail.contact.email}`;
+            document.getElementById('detail-phone').textContent = currentDetail.contact.phone;
+            document.getElementById('detail-phone').href = `tel:${currentDetail.contact.phone}`;
+            document.getElementById('detail-hours').textContent = currentDetail.contact.hours || 'Not specified';
+            
+            // Show detail page
+            showPage('property-detail-page');
+        }
+
+        // Add new property
+        function addProperty(e) {
+            e.preventDefault();
+            
+            // Get form values
+            const newProperty = {
+                id: Date.now(), // Simple unique ID
+                title: document.getElementById('property-title').value,
+                type: document.getElementById('property-type').value,
+                price: document.getElementById('property-price').value,
+                area: document.getElementById('property-area').value,
+                address: document.getElementById('property-address').value,
+                city: document.getElementById('property-city').value,
+                state: document.getElementById('property-state').value,
+                zip: document.getElementById('property-zip').value,
+                description: document.getElementById('property-description').value,
+                contact: {
+                    name: document.getElementById('contact-name').value,
+                    phone: document.getElementById('contact-phone').value,
+                    email: document.getElementById('contact-email').value,
+                    hours: document.getElementById('contact-hours').value
+                },
+                images: []
+            };
+            
+            // Handle image uploads (just storing File objects in this demo)
+            const fileInput = document.getElementById('property-images');
+            if (fileInput.files.length > 0) {
+                // In a real app, you would upload these to a server
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    const file = fileInput.files[i];
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        newProperty.images.push(e.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+            
+            // Add to properties array
+            // Save to Firebase instead
+db.collection("properties").add(newProperty)
+  .then(() => console.log("Property added!"))
+  .catch((error) => console.error("Error: ", error));
+            
+            // Reset form
+            e.target.reset();
+            document.getElementById('image-preview').innerHTML = '';
+            document.getElementById('image-preview').classList.add('hidden');
+            
+            // Show listing page with new property
+            showPage('listings-page');
+        }
+
+        // Image upload preview
+        document.getElementById('property-images').addEventListener('change', function(e) {
+            const previewContainer = document.getElementById('image-preview');
+            previewContainer.innerHTML = '';
+            
+            if (this.files.length > 0) {
+                previewContainer.classList.remove('hidden');
+                
+                for (let i = 0; i < this.files.length; i++) {
+                    const file = this.files[i];
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        const previewDiv = document.createElement('div');
+                        previewDiv.className = 'relative group';
+                        
+                        const previewImg = document.createElement('img');
+                        previewImg.src = e.target.result;
+                        previewImg.className = 'w-full h-24 object-cover rounded-lg';
+                        previewImg.alt = 'Uploaded property image preview';
+                        
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition';
+                        deleteBtn.innerHTML = '&times;';
+                        deleteBtn.addEventListener('click', function() {
+                            previewDiv.remove();
+                            if (document.getElementById('image-preview').children.length === 0) {
+                                previewContainer.classList.add('hidden');
+                            }
+                        });
+                        
+                        previewDiv.appendChild(previewImg);
+                        previewDiv.appendChild(deleteBtn);
+                        previewContainer.appendChild(previewDiv);
+                    }
+                    
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSampleProperties();
+        });
+    </script>
+</body>
+</html>
