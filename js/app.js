@@ -328,6 +328,7 @@ class PropertyMarketplace {
         const searchTerm = document.getElementById('search-input')?.value.toLowerCase() || '';
         const typeFilter = document.getElementById('type-filter')?.value || '';
         const priceFilter = document.getElementById('price-filter')?.value || '';
+        const countryFilter = document.getElementById('country-filter')?.value || '';
 
         this.filteredProperties = this.properties.filter(property => {
             // Search filter
@@ -340,6 +341,9 @@ class PropertyMarketplace {
             // Type filter
             const matchesType = !typeFilter || property.type === typeFilter;
 
+            // Country filter
+            const matchesCountry = !countryFilter || (property.country && property.country.code === countryFilter);
+
             // Price filter
             let matchesPrice = true;
             if (priceFilter) {
@@ -347,7 +351,7 @@ class PropertyMarketplace {
                 matchesPrice = property.price >= min && property.price <= max;
             }
 
-            return matchesSearch && matchesType && matchesPrice;
+            return matchesSearch && matchesType && matchesCountry && matchesPrice;
         });
 
         this.renderProperties();
