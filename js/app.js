@@ -612,6 +612,13 @@ function showPage(pageId) {
     }
 }
 
+function updateCurrencyAndUnits() {
+    const countrySelect = document.getElementById('country-select');
+    if (countrySelect && app) {
+        app.updateCurrencyAndUnits(countrySelect.value);
+    }
+}
+
 // Initialize the application
 let app;
 document.addEventListener('DOMContentLoaded', () => {
@@ -621,3 +628,4 @@ document.addEventListener('DOMContentLoaded', () => {
 // Global functions for onclick handlers
 window.showPage = showPage;
 window.app = app;
+window.updateCurrencyAndUnits = updateCurrencyAndUnits;
