@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Modern property marketplace for buying and selling real estate">
+    <title>Property Marketplace</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    
+    <!-- External CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-sm">PM</span>
+                    </div>
+                    <h1 class="text-xl font-bold text-gray-900">Property Marketplace</h1>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <button onclick="showPage('listings-page')" class="nav-link text-gray-600 hover:text-blue-600 font-medium transition-colors">
+                        Listings
+                    </button>
+                    <button onclick="showPage('add-property-page')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                        Add Property
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Loading Spinner -->
+    <div id="loading-spinner" class="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50 hidden">
+        <div class="flex flex-col items-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p class="mt-4 text-gray-600">Loading properties...</p>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notification-container" class="fixed top-20 right-4 z-50 space-y-2"></div>
+
+    <!-- Property Listings Page -->
+    <div id="listings-page" class="page active-page">
+        <main class="container mx-auto px-4 py-8">
+            <!-- Search and Filter Section -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-1">
+                        <input 
+                            type="text" 
+                            id="search-input" 
+                            placeholder="Search properties by title, city, or address..." 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            oninput="filterProperties()"
+                        >
+                    </div>
+                    <div class="flex gap-4">
+                        <select id="type-filter" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="filterProperties()">
+                            <option value="">All Types</option>
+                            <option value="House">House</option>
+                            <option value="Apartment">Apartment</option>
+                            <option value="Villa">Villa</option>
+                            <option value="Land">Land</option>
+                            <option value="Commercial">Commercial</option>
+                        </select>
+                        <select id="price-filter" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="filterProperties()">
+                            <option value="">All Prices</option>
+                            <option value="0-500000">Under $500K</option>
+                            <option value="500000-1000000">$500K - $1M</option>
+                            <option value="1000000-2000000">$1M - $2M</option>
+                            <option value="2000000-999999999">Above $2M</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Property List -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-900">Available Properties</h2>
+                        <span id="property-count" class="text-gray-500 text-sm"></span>
+                    </div>
+                    <div id="property-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Properties will be added here dynamically -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Property Page -->
+    <div id="add-property-page" class="page">
+        <main class="container mx-auto px-4 py-8">
+            <div class="max-w-4xl mx-auto">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
+                        <h2 class="text-2xl font-bold text-white">Add New Property</h2>
+                        <p class="text-blue-100 mt-1">Fill in the details below to list your property</p>
+                    </div>
+                    
+                    <div class="p-6">
+                        <form id="property-form" class="space-y-8">
+                            <!-- Basic Information -->
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Basic Information</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label for="property-title" class="block text-sm font-medium text-gray-700 mb-2">Property Title*</label>
+                                        <input type="text" id="property-title" class="form-input" placeholder="Beautiful beachfront villa" required>
+                                    </div>
+                                    <div>
+                                        <label for="property-type" class="block text-sm font-medium text-gray-700 mb-2">Property Type*</label>
+                                        <select id="property-type" class="form-input" required>
+                                            <option value="">Select property type</option>
+                                            <option value="House">House</option>
+                                            <option value="Apartment">Apartment</option>
+                                            <option value="Villa">Villa</option>
+                                            <option value="Land">Land</option>
+                                            <option value="Commercial">Commercial</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="property-price" class="block text-sm font-medium text-gray-700 mb-2">Price (USD)*</label>
+                                        <input type="number" id="property-price" class="form-input" placeholder="500000" min="0" required>
+                                    </div>
+                                    <div>
+                                        <label for="property-area" class="block text-sm font-medium text-gray-700 mb-2">Area (sq ft)*</label>
+                                        <input type="number" id="property-area" class="form-input" placeholder="2000" min="1" required>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Location -->
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Location Details</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="md:col-span-2">
+                                        <label for="property-address" class="block text-sm font-medium text-gray-700 mb-2">Street Address*</label>
+                                        <input type="text" id="property-address" class="form-input" placeholder="123 Main Street" required>
+                                    </div>
+                                    <div>
+                                        <label for="property-city" class="block text-sm font-medium text-gray-700 mb-2">City*</label>
+                                        <input type="text" id="property-city" class="form-input" placeholder="New York" required>
+                                    </div>
+                                    <div>
+                                        <label for="property-state" class="block text-sm font-medium text-gray-700 mb-2">State*</label>
+                                        <input type="text" id="property-state" class="form-input" placeholder="NY" required>
+                                    </div>
+                                    <div>
+                                        <label for="property-zip" class="block text-sm font-medium text-gray-700 mb-2">ZIP Code*</label>
+                                        <input type="text" id="property-zip" class="form-input" placeholder="10001" required>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Description -->
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Property Description</h3>
+                                <div>
+                                    <label for="property-description" class="block text-sm font-medium text-gray-700 mb-2">Detailed Description*</label>
+                                    <textarea id="property-description" rows="5" class="form-input" placeholder="Describe your property in detail, including features, amenities, and unique selling points..." required></textarea>
+                                </div>
+                            </div>
+                            
+                            <!-- Images -->
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Property Images</h3>
+                                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+                                    <input type="file" id="property-images" class="hidden" accept="image/*" multiple>
+                                    <div id="image-preview" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 hidden"></div>
+                                    <label for="property-images" class="cursor-pointer">
+                                        <div class="flex flex-col items-center justify-center space-y-3">
+                                            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                                                <span class="text-2xl text-gray-400">📷</span>
+                                            </div>
+                                            <div>
+                                                <p class="text-lg font-medium text-gray-700">Upload Property Images</p>
+                                                <p class="text-sm text-gray-500 mt-1">Click to browse or drag and drop</p>
+                                                <p class="text-xs text-gray-400 mt-2">PNG, JPG, GIF up to 10MB each</p>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Contact Information -->
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Contact Information</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label for="contact-name" class="block text-sm font-medium text-gray-700 mb-2">Your Name*</label>
+                                        <input type="text" id="contact-name" class="form-input" placeholder="John Smith" required>
+                                    </div>
+                                    <div>
+                                        <label for="contact-phone" class="block text-sm font-medium text-gray-700 mb-2">Phone Number*</label>
+                                        <input type="tel" id="contact-phone" class="form-input" placeholder="+1 (555) 123-4567" required>
+                                    </div>
+                                    <div>
+                                        <label for="contact-email" class="block text-sm font-medium text-gray-700 mb-2">Email Address*</label>
+                                        <input type="email" id="contact-email" class="form-input" placeholder="john@example.com" required>
+                                    </div>
+                                    <div>
+                                        <label for="contact-hours" class="block text-sm font-medium text-gray-700 mb-2">Available Hours</label>
+                                        <input type="text" id="contact-hours" class="form-input" placeholder="9AM - 6PM">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="pt-6 border-t border-gray-200">
+                                <div class="flex gap-4">
+                                    <button type="button" onclick="showPage('listings-page')" class="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+                                        Cancel
+                                    </button>
+                                    <button type="submit" class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-medium">
+                                        List Property
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Property Detail Page -->
+    <div id="property-detail-page" class="page">
+        <main class="container mx-auto px-4 py-8">
+            <div class="max-w-6xl mx-auto">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <!-- Property Images -->
+                    <div class="relative h-96 bg-gray-100">
+                        <img id="detail-main-image" src="" alt="Property main image" class="w-full h-full object-cover">
+                        <button onclick="showPage('listings-page')" class="absolute top-4 left-4 bg-white bg-opacity-90 hover:bg-opacity-100 text-gray-700 p-2 rounded-lg transition-all">
+                            ← Back to Listings
+                        </button>
+                    </div>
+                    
+                    <div class="p-8">
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <!-- Property Details -->
+                            <div class="lg:col-span-2">
+                                <div class="mb-6">
+                                    <h1 id="detail-title" class="text-3xl font-bold text-gray-900 mb-2"></h1>
+                                    <p id="detail-location" class="text-lg text-gray-600"></p>
+                                </div>
+                                
+                                <div class="flex items-center gap-6 mb-8 p-4 bg-gray-50 rounded-lg">
+                                    <div class="text-center">
+                                        <p class="text-2xl font-bold text-blue-600" id="detail-price"></p>
+                                        <p class="text-sm text-gray-500">Price</p>
+                                    </div>
+                                    <div class="text-center">
+                                        <p class="text-2xl font-bold text-gray-900" id="detail-area"></p>
+                                        <p class="text-sm text-gray-500">Area</p>
+                                    </div>
+                                    <div class="text-center">
+                                        <p class="text-2xl font-bold text-gray-900" id="detail-type"></p>
+                                        <p class="text-sm text-gray-500">Type</p>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Description</h3>
+                                    <p id="detail-description" class="text-gray-600 leading-relaxed"></p>
+                                </div>
+                            </div>
+                            
+                            <!-- Contact Information -->
+                            <div>
+                                <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
+                                    <h3 class="text-xl font-semibold text-gray-900 mb-6">Contact Information</h3>
+                                    
+                                    <div class="space-y-4 mb-6">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                                <span class="text-blue-600 font-semibold">👤</span>
+                                            </div>
+                                            <div>
+                                                <p class="font-medium text-gray-900" id="detail-contact-name"></p>
+                                                <p class="text-sm text-gray-500">Property Owner</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                                <span class="text-green-600 font-semibold">📧</span>
+                                            </div>
+                                            <div>
+                                                <a id="detail-email" href="#" class="font-medium text-blue-600 hover:text-blue-800"></a>
+                                                <p class="text-sm text-gray-500">Email</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                                                <span class="text-purple-600 font-semibold">📞</span>
+                                            </div>
+                                            <div>
+                                                <a id="detail-phone" href="#" class="font-medium text-blue-600 hover:text-blue-800"></a>
+                                                <p class="text-sm text-gray-500">Phone</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                                                <span class="text-orange-600 font-semibold">🕒</span>
+                                            </div>
+                                            <div>
+                                                <p class="font-medium text-gray-900" id="detail-hours"></p>
+                                                <p class="text-sm text-gray-500">Available Hours</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <button class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-medium">
+                                        Contact Seller
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- External JavaScript -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
